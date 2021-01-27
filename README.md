@@ -27,3 +27,7 @@ Please execute the FINAL.ipynb to check for any sample image. If Table and Colum
 Distributed under the MIT LICENSE
 
 Pull requests are welcome.
+
+# Additional URLs
+Please visit the blog https://raisulhazari.medium.com/tablenet-table-detection-and-tabular-data-extraction-from-images-f6834c74b006 for step by step process and 
+http://ec2-3-128-192-0.us-east-2.compute.amazonaws.com:8080/upload to access the deployed web app
