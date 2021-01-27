@@ -7,8 +7,6 @@ from werkzeug.datastructures import  FileStorage
 
 import os
 import tensorflow as tf
-import matplotlib.pyplot as plt
-
 from tensorflow.keras import Sequential
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import BatchNormalization
@@ -21,10 +19,7 @@ from tensorflow.keras.layers import Dense
 from tensorflow.keras.layers import Flatten
 from tensorflow.keras.layers import Input, Concatenate, UpSampling2D
 
-import datetime
-
 from PIL import Image
-import statistics
 import pytesseract
 
 from flask import Flask, render_template, request,jsonify
@@ -38,6 +33,10 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 image_height=1024
 image_width=1024
 
+
+@app.route('/')
+def hello_world():
+    return 'To access the webpage please visit "upload" page'
 
 
 # %% [code]
@@ -97,28 +96,27 @@ def show_prediction_sample_image(dataset=None, num=1):
         table_mask, column_mask = create_mask(pred_mask1, pred_mask2)
         
         img1=tf.keras.preprocessing.image.array_to_img(image[0])
-        im.save('image.bmp')
+        img1.save('image.bmp')
         
         img2=tf.keras.preprocessing.image.array_to_img(table_mask)
-        im.save('table_mask.bmp')
+        img2.save('table_mask.bmp')
         
         img3=tf.keras.preprocessing.image.array_to_img(column_mask)
-        im.save('column_mask.bmp')
+        img3.save('column_mask.bmp')
         
     
     return 'img1','img2','img3' 
 		
 
 # %% [code]
-def generate_segment(img1,img2,img3):
-    #img_org  = Image.open('./image.bmp')
-    img_org=img1
-	#img_mask = Image.open('./table_mask.bmp')
-    img_mask=img2
+def generate_segment():
+    img_org  = Image.open('./image.bmp')
+    #img_org=img1
+    img_mask = Image.open('./table_mask.bmp')
+    #img_mask=img2
     img_mask = img_mask.convert('L')
-    img=img_org.putalpha(img_mask)
-    return img 
-    #img_org.save('output.png')
+    img=img_org.putalpha(img_mask) 
+    img_org.save('output.png')
 
 # %% [code]
 def ocr_core(filename):
@@ -163,8 +161,13 @@ def upload_file():
       name=f.filename
       #location='uploads/' + name
       f.save(os.path.join(app.config['UPLOAD_FOLDER'], name))
+      imgs=Image.open('uploads/'+ name)
+      if(imgs.mode=='RGBA'):
+          rgb_im = imgs.convert('RGB')
+          fname='uploads/' + name
+          rgb_im.save(fname,'jpeg')
       #f.save(secure_filename(location))
-      img_path='uploads/*.jpg'
+      img_path='uploads/*'
       list_ds = tf.data.Dataset.list_files(img_path)
       DATASET_SIZE = len(list(list_ds))
       test_size = DATASET_SIZE
@@ -174,12 +177,32 @@ def upload_file():
       test = test.map(process_1)
       test_dataset = test.batch(BATCH_SIZE)
       img1,img2,img3=show_prediction_sample_image(test_dataset)
-      #img=generate_segment()
-      #text=ocr_core(img)
+      generate_segment()
+      text=ocr_core('output.png')
 	  
       
-      #os.remove(os.path.join(app.config['UPLOAD_FOLDER'], name))
-      return jsonify({'Table_data': 'text'})
+      os.remove(os.path.join(app.config['UPLOAD_FOLDER'], name))
+
+      #text=text.split('\n')
+      text = text.split('\n')
+      
+      d={}
+      count=1
+
+      for i in range(0,len(text)):
+          if(text[i]==""):
+              k=1
+          elif(text[i]== " "):
+              k=2
+          elif(text[i] == ''):
+              k=3
+          elif(text[i] ==' '):
+              k=4
+          else:
+              d[count]=text[i]
+              count=count+1
+
+      return jsonify({'Table_data': d})
 		
 if __name__ == '__main__':
-   app.run(debug = True)
+   app.run(host='0.0.0.0',debug=True, port=8080)
